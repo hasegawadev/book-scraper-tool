@@ -6,4 +6,5 @@ build/
 dist/
 *.spec
 config.json
+last_scrape.json
 納品物_EC商品データ自動収集ツール/
