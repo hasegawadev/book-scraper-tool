@@ -6,9 +6,14 @@ import os
 import sys
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext, ttk
+from tkinter import filedialog, messagebox
+import customtkinter as ctk
 
 from scraper import export_to_excel, filter_candidates, scrape_books
+
+# 全体テーマの初期設定
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
 
 def get_base_dir() -> str:
@@ -22,28 +27,29 @@ CONFIG_FILE = os.path.join(get_base_dir(), "config.json")
 DEFAULT_OUTPUT_DIR = os.path.join(get_base_dir(), "output")
 
 
-class BookScraperApp:
-    def __init__(self, root: tk.Tk) -> None:
-        self.root = root
-        self.root.title("ECサイト商品データ自動収集＆条件抽出ツール")
-        self.root.geometry("680x560")
-        self.root.minsize(600, 480)
+class BookScraperApp(ctk.CTk):
+    def __init__(self) -> None:
+        super().__init__()
+        self.title("ECサイト商品データ自動収集＆条件抽出ツール")
+        self.geometry("760x660")
+        self.minsize(680, 580)
 
         # 状態管理フラグ
         self.stop_event = threading.Event()
         self.worker_thread: threading.Thread | None = None
 
         # 設定変数の初期化
-        self.max_pages_var = tk.StringVar(value="5")
-        self.min_rating_var = tk.StringVar(value="4")
-        self.max_price_var = tk.StringVar(value="30.0")
-        self.output_dir_var = tk.StringVar(value=DEFAULT_OUTPUT_DIR)
-        self.status_var = tk.StringVar(value="待機中")
+        self.max_pages_var = ctk.StringVar(value="5")
+        self.min_rating_var = ctk.StringVar(value="4")
+        self.max_price_var = ctk.StringVar(value="30.0")
+        self.output_dir_var = ctk.StringVar(value=DEFAULT_OUTPUT_DIR)
+        self.status_var = ctk.StringVar(value="待機中")
+        self.dark_mode_var = ctk.BooleanVar(value=True)
 
         # config.json から前回設定を読み込み
         self.load_config()
 
-        # UI構築
+        # モダンUI構築
         self._build_ui()
 
     def load_config(self) -> None:
@@ -69,111 +75,225 @@ class BookScraperApp:
         except Exception as e:
             self.append_log(f"[警告] 設定ファイルの保存に失敗しました: {e}")
 
-    def _build_ui(self) -> None:
-        """GUIレイアウトを構築する。"""
-        main_frame = ttk.Frame(self.root, padding=12)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+    def toggle_appearance_mode(self) -> None:
+        """ダークモード／ライトモードを切り替える。"""
+        if self.dark_mode_var.get():
+            ctk.set_appearance_mode("dark")
+            self.theme_switch.configure(text="ダークモード")
+        else:
+            ctk.set_appearance_mode("light")
+            self.theme_switch.configure(text="ライトモード")
 
-        # --- 1. 抽出・収集設定エリア ---
-        settings_frame = ttk.LabelFrame(main_frame, text="収集・抽出条件設定", padding=10)
-        settings_frame.pack(fill=tk.X, pady=(0, 10))
-        settings_frame.columnconfigure(1, weight=1)
+    def _build_ui(self) -> None:
+        """角丸カード型フレーム（CTkFrame）を用いたモダンなGUIレイアウトを構築する。"""
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(3, weight=1)
+
+        font_title = ctk.CTkFont(family="Yu Gothic UI", size=20, weight="bold")
+        font_section = ctk.CTkFont(family="Yu Gothic UI", size=14, weight="bold")
+        font_body = ctk.CTkFont(family="Yu Gothic UI", size=13)
+        font_sub = ctk.CTkFont(family="Yu Gothic UI", size=12)
+        font_log = ctk.CTkFont(family="Consolas", size=12)
+
+        # --- 0. ヘッダーエリア（タイトル＋右上ライト／ダークモード切替スイッチ） ---
+        header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(16, 8))
+        header_frame.grid_columnconfigure(0, weight=1)
+
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="ECサイト商品データ自動収集ツール",
+            font=font_title,
+            anchor="w",
+        )
+        title_label.grid(row=0, column=0, sticky="w")
+
+        self.theme_switch = ctk.CTkSwitch(
+            header_frame,
+            text="ダークモード",
+            variable=self.dark_mode_var,
+            onvalue=True,
+            offvalue=False,
+            command=self.toggle_appearance_mode,
+            font=font_sub,
+        )
+        self.theme_switch.grid(row=0, column=1, sticky="e")
+
+        # --- 1. 設定項目カード（CTkFrame） ---
+        settings_card = ctk.CTkFrame(self, corner_radius=12)
+        settings_card.grid(row=1, column=0, sticky="ew", padx=20, pady=8)
+        settings_card.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(
+            settings_card,
+            text="収集・抽出条件設定",
+            font=font_section,
+            anchor="w",
+        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=18, pady=(14, 8))
 
         # 取得ページ数上限
-        ttk.Label(settings_frame, text="取得ページ数上限 (1〜50):").grid(
-            row=0, column=0, sticky=tk.W, padx=(0, 10), pady=4
+        ctk.CTkLabel(
+            settings_card, text="取得ページ数上限 (1〜50):", font=font_body
+        ).grid(row=1, column=0, sticky="w", padx=(18, 12), pady=6)
+
+        self.pages_entry = ctk.CTkEntry(
+            settings_card, textvariable=self.max_pages_var, width=100, font=font_body
         )
-        pages_spin = ttk.Spinbox(
-            settings_frame,
-            from_=1,
-            to=50,
-            textvariable=self.max_pages_var,
-            width=10,
-        )
-        pages_spin.grid(row=0, column=1, sticky=tk.W, pady=4)
-        ttk.Label(settings_frame, text="※全件取得時は 50 を指定（1ページ20件）").grid(
-            row=0, column=2, sticky=tk.W, padx=(8, 0), pady=4
-        )
+        self.pages_entry.grid(row=1, column=1, sticky="w", pady=6)
+
+        ctk.CTkLabel(
+            settings_card,
+            text="※全件取得時は 50 を指定（1ページ20件）",
+            font=font_sub,
+            text_color=("gray35", "gray70"),
+        ).grid(row=1, column=2, sticky="w", padx=(10, 18), pady=6)
 
         # 仕入れ候補の最低評価
-        ttk.Label(settings_frame, text="仕入れ候補の最低評価 (1〜5):").grid(
-            row=1, column=0, sticky=tk.W, padx=(0, 10), pady=4
-        )
-        rating_combo = ttk.Combobox(
-            settings_frame,
-            textvariable=self.min_rating_var,
+        ctk.CTkLabel(
+            settings_card, text="仕入れ候補の最低評価 (1〜5):", font=font_body
+        ).grid(row=2, column=0, sticky="w", padx=(18, 12), pady=6)
+
+        self.rating_menu = ctk.CTkOptionMenu(
+            settings_card,
+            variable=self.min_rating_var,
             values=["1", "2", "3", "4", "5"],
-            state="readonly",
-            width=8,
+            width=100,
+            font=font_body,
         )
-        rating_combo.grid(row=1, column=1, sticky=tk.W, pady=4)
-        ttk.Label(settings_frame, text="以上").grid(
-            row=1, column=2, sticky=tk.W, padx=(8, 0), pady=4
-        )
+        self.rating_menu.grid(row=2, column=1, sticky="w", pady=6)
+
+        ctk.CTkLabel(
+            settings_card,
+            text="以上",
+            font=font_sub,
+            text_color=("gray35", "gray70"),
+        ).grid(row=2, column=2, sticky="w", padx=(10, 18), pady=6)
 
         # 仕入れ候補の上限価格
-        ttk.Label(settings_frame, text="仕入れ候補の上限価格 (£):").grid(
-            row=2, column=0, sticky=tk.W, padx=(0, 10), pady=4
+        ctk.CTkLabel(
+            settings_card, text="仕入れ候補の上限価格 (£):", font=font_body
+        ).grid(row=3, column=0, sticky="w", padx=(18, 12), pady=6)
+
+        self.price_entry = ctk.CTkEntry(
+            settings_card, textvariable=self.max_price_var, width=100, font=font_body
         )
-        price_entry = ttk.Entry(settings_frame, textvariable=self.max_price_var, width=12)
-        price_entry.grid(row=2, column=1, sticky=tk.W, pady=4)
-        ttk.Label(settings_frame, text="以下（かつ在庫「In stock」を含む）").grid(
-            row=2, column=2, sticky=tk.W, padx=(8, 0), pady=4
-        )
+        self.price_entry.grid(row=3, column=1, sticky="w", pady=6)
+
+        ctk.CTkLabel(
+            settings_card,
+            text="以下（かつ在庫「In stock」を含む）",
+            font=font_sub,
+            text_color=("gray35", "gray70"),
+        ).grid(row=3, column=2, sticky="w", padx=(10, 18), pady=6)
 
         # 出力先フォルダ選択
-        ttk.Label(settings_frame, text="出力先フォルダ:").grid(
-            row=3, column=0, sticky=tk.W, padx=(0, 10), pady=4
+        ctk.CTkLabel(
+            settings_card, text="出力先フォルダ:", font=font_body
+        ).grid(row=4, column=0, sticky="w", padx=(18, 12), pady=(6, 16))
+
+        dir_subframe = ctk.CTkFrame(settings_card, fg_color="transparent")
+        dir_subframe.grid(row=4, column=1, columnspan=2, sticky="ew", padx=(0, 18), pady=(6, 16))
+        dir_subframe.grid_columnconfigure(0, weight=1)
+
+        self.dir_entry = ctk.CTkEntry(
+            dir_subframe, textvariable=self.output_dir_var, font=font_body
         )
-        dir_frame = ttk.Frame(settings_frame)
-        dir_frame.grid(row=3, column=1, columnspan=2, sticky=tk.EW, pady=4)
-        dir_frame.columnconfigure(0, weight=1)
+        self.dir_entry.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
-        dir_entry = ttk.Entry(dir_frame, textvariable=self.output_dir_var)
-        dir_entry.grid(row=0, column=0, sticky=tk.EW, padx=(0, 6))
-
-        browse_btn = ttk.Button(dir_frame, text="参照...", command=self.browse_output_dir)
-        browse_btn.grid(row=0, column=1)
-
-        # --- 2. 操作ボタンエリア ---
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X, pady=(0, 10))
-
-        self.start_btn = ttk.Button(
-            btn_frame, text="収集開始", command=self.start_scraping, width=16
+        self.browse_btn = ctk.CTkButton(
+            dir_subframe,
+            text="参照...",
+            width=90,
+            font=font_body,
+            fg_color=("gray75", "gray28"),
+            hover_color=("gray65", "gray38"),
+            text_color=("gray10", "gray95"),
+            command=self.browse_output_dir,
         )
-        self.start_btn.pack(side=tk.LEFT, padx=(0, 8))
+        self.browse_btn.grid(row=0, column=1)
 
-        self.stop_btn = ttk.Button(
-            btn_frame, text="中断", command=self.stop_scraping, state=tk.DISABLED, width=12
+        # --- 2. 進捗状況＆操作ボタンカード（CTkFrame） ---
+        progress_card = ctk.CTkFrame(self, corner_radius=12)
+        progress_card.grid(row=2, column=0, sticky="ew", padx=20, pady=8)
+        progress_card.grid_columnconfigure(0, weight=1)
+
+        # アクションボタン行
+        action_frame = ctk.CTkFrame(progress_card, fg_color="transparent")
+        action_frame.grid(row=0, column=0, sticky="ew", padx=18, pady=(14, 10))
+        action_frame.grid_columnconfigure(2, weight=1)
+
+        self.start_btn = ctk.CTkButton(
+            action_frame,
+            text="収集開始",
+            width=140,
+            height=36,
+            font=ctk.CTkFont(family="Yu Gothic UI", size=13, weight="bold"),
+            command=self.start_scraping,
         )
-        self.stop_btn.pack(side=tk.LEFT, padx=(0, 8))
+        self.start_btn.grid(row=0, column=0, padx=(0, 10))
 
-        self.open_dir_btn = ttk.Button(
-            btn_frame, text="出力先フォルダを開く", command=self.open_output_dir, width=20
+        self.stop_btn = ctk.CTkButton(
+            action_frame,
+            text="中断",
+            width=110,
+            height=36,
+            font=font_body,
+            fg_color="#c94a4a",
+            hover_color="#a83838",
+            state="disabled",
+            command=self.stop_scraping,
         )
-        self.open_dir_btn.pack(side=tk.RIGHT)
+        self.stop_btn.grid(row=0, column=1, padx=(0, 10))
 
-        # --- 3. 進捗表示エリア ---
-        progress_frame = ttk.LabelFrame(main_frame, text="進捗状況", padding=10)
-        progress_frame.pack(fill=tk.X, pady=(0, 10))
-
-        self.status_label = ttk.Label(progress_frame, textvariable=self.status_var)
-        self.status_label.pack(anchor=tk.W, pady=(0, 6))
-
-        self.progress_bar = ttk.Progressbar(
-            progress_frame, orient=tk.HORIZONTAL, mode="determinate"
+        self.open_dir_btn = ctk.CTkButton(
+            action_frame,
+            text="出力先フォルダを開く",
+            width=170,
+            height=36,
+            font=font_body,
+            fg_color=("gray75", "gray28"),
+            hover_color=("gray65", "gray38"),
+            text_color=("gray10", "gray95"),
+            command=self.open_output_dir,
         )
-        self.progress_bar.pack(fill=tk.X)
+        self.open_dir_btn.grid(row=0, column=3, sticky="e")
 
-        # --- 4. 実行ログ表示エリア ---
-        log_frame = ttk.LabelFrame(main_frame, text="実行ログ", padding=10)
-        log_frame.pack(fill=tk.BOTH, expand=True)
+        # 進捗ステータス＆プログレスバー
+        status_header = ctk.CTkFrame(progress_card, fg_color="transparent")
+        status_header.grid(row=1, column=0, sticky="ew", padx=18, pady=(2, 4))
+        status_header.grid_columnconfigure(1, weight=1)
 
-        self.log_text = scrolledtext.ScrolledText(
-            log_frame, height=12, state=tk.DISABLED, wrap=tk.WORD, font=("Consolas", 9)
+        ctk.CTkLabel(
+            status_header, text="進捗状況:", font=font_section
+        ).grid(row=0, column=0, sticky="w", padx=(0, 8))
+
+        self.status_label = ctk.CTkLabel(
+            status_header, textvariable=self.status_var, font=font_body, anchor="w"
         )
-        self.log_text.pack(fill=tk.BOTH, expand=True)
+        self.status_label.grid(row=0, column=1, sticky="w")
+
+        self.progress_bar = ctk.CTkProgressBar(progress_card, height=12, corner_radius=6)
+        self.progress_bar.grid(row=2, column=0, sticky="ew", padx=18, pady=(4, 16))
+        self.progress_bar.set(0.0)
+
+        # --- 3. 実行ログカード（CTkFrame） ---
+        log_card = ctk.CTkFrame(self, corner_radius=12)
+        log_card.grid(row=3, column=0, sticky="nsew", padx=20, pady=(8, 18))
+        log_card.grid_columnconfigure(0, weight=1)
+        log_card.grid_rowconfigure(1, weight=1)
+
+        ctk.CTkLabel(
+            log_card, text="実行ログ", font=font_section, anchor="w"
+        ).grid(row=0, column=0, sticky="w", padx=18, pady=(12, 6))
+
+        self.log_text = ctk.CTkTextbox(
+            log_card,
+            font=font_log,
+            corner_radius=8,
+            wrap="word",
+            state="disabled",
+        )
+        self.log_text.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 16))
 
     def browse_output_dir(self) -> None:
         """出力先フォルダ選択ダイアログを開き、選択されたパスを保存する。"""
@@ -200,21 +320,21 @@ class BookScraperApp:
         line = f"[{timestamp}] {message}\n"
 
         def _append() -> None:
-            self.log_text.configure(state=tk.NORMAL)
+            self.log_text.configure(state="normal")
             self.log_text.insert(tk.END, line)
             self.log_text.see(tk.END)
-            self.log_text.configure(state=tk.DISABLED)
+            self.log_text.configure(state="disabled")
 
-        self.root.after(0, _append)
+        self.after(0, _append)
 
     def update_progress(self, current_page: int, max_pages: int) -> None:
         """メインスレッド上でプログレスバーとステータス表示を更新する。"""
         def _update() -> None:
-            self.progress_bar["maximum"] = max_pages
-            self.progress_bar["value"] = current_page - 1
+            ratio = (current_page - 1) / max_pages if max_pages > 0 else 0.0
+            self.progress_bar.set(ratio)
             self.status_var.set(f"{current_page} / {max_pages} ページ目を収集中...")
 
-        self.root.after(0, _update)
+        self.after(0, _update)
 
     def validate_inputs(self) -> tuple[int, int, float, str] | None:
         """画面入力値を検証して (max_pages, min_rating, max_price, output_dir) を返す。"""
@@ -256,10 +376,9 @@ class BookScraperApp:
 
         # UI状態の更新
         self.stop_event.clear()
-        self.start_btn.configure(state=tk.DISABLED)
-        self.stop_btn.configure(state=tk.NORMAL)
-        self.progress_bar["maximum"] = max_pages
-        self.progress_bar["value"] = 0
+        self.start_btn.configure(state="disabled")
+        self.stop_btn.configure(state="normal")
+        self.progress_bar.set(0.0)
         self.status_var.set("データ収集を開始しています...")
 
         self.append_log(
@@ -277,7 +396,7 @@ class BookScraperApp:
         """「中断」ボタン押下時の処理。安全にループを抜けるフラグを立てる。"""
         if self.worker_thread and self.worker_thread.is_alive():
             self.stop_event.set()
-            self.stop_btn.configure(state=tk.DISABLED)
+            self.stop_btn.configure(state="disabled")
             self.status_var.set("中断処理中... 現在のページ処理完了を待っています")
             self.append_log("中断リクエストを受け付けました。安全に停止します...")
 
@@ -317,12 +436,12 @@ class BookScraperApp:
                             f"中断完了（取得済み {len(df)} 件をExcelに出力しました）"
                         )
                     else:
-                        self.progress_bar["value"] = max_pages
+                        self.progress_bar.set(1.0)
                         self.status_var.set(
                             f"完了！ 全 {len(df)} 件（仕入れ候補 {len(candidates_df)} 件）を出力しました"
                         )
 
-                self.root.after(0, _on_done)
+                self.after(0, _on_done)
             else:
                 self.append_log("[警告] 取得されたデータが 0 件のため、Excel出力をスキップしました。")
 
@@ -332,23 +451,22 @@ class BookScraperApp:
                     else:
                         self.status_var.set("エラーまたはデータなしのため終了しました")
 
-                self.root.after(0, _on_empty)
+                self.after(0, _on_empty)
 
         except Exception as e:
             self.append_log(f"[エラー] 予期しない例外が発生しました: {e}")
-            self.root.after(0, lambda: self.status_var.set("エラーにより停止しました"))
+            self.after(0, lambda: self.status_var.set("エラーにより停止しました"))
         finally:
             def _restore_buttons() -> None:
-                self.start_btn.configure(state=tk.NORMAL)
-                self.stop_btn.configure(state=tk.DISABLED)
+                self.start_btn.configure(state="normal")
+                self.stop_btn.configure(state="disabled")
 
-            self.root.after(0, _restore_buttons)
+            self.after(0, _restore_buttons)
 
 
 def main() -> None:
-    root = tk.Tk()
-    app = BookScraperApp(root)
-    root.mainloop()
+    app = BookScraperApp()
+    app.mainloop()
 
 
 if __name__ == "__main__":
