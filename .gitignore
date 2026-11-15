@@ -1,0 +1,14 @@
+# .gitignore の作成（PowerShell用コマンド）
+@"
+.venv/
+__pycache__/
+*.pyc
+output/
+build/
+dist/
+*.spec
+"@ | Out-File -FilePath .gitignore -Encoding utf8
+
+# 初期設定をコミット
+git add .gitignore requirements.txt
+git commit -m "chore: プロジェクト初期設定（仮想環境・依存ライブラリ・gitignore）"
