@@ -1,4 +1,5 @@
 <img width="682" height="592" alt="スクリーンショット 2026-11-15 204244" src="https://github.com/user-attachments/assets/319269ab-5f8b-401c-a2eb-b14f4829cb6e" />
+
 # ECサイト商品データ自動収集＆条件抽出ツール (book-scraper-tool)
 
 対象ECサイト（[Books to Scrape](https://books.toscrape.com/)）から商品データを自動収集し、全商品データおよび指定条件に合致する「仕入れ候補リスト」をExcelファイル（`.xlsx`）へ自動出力するWindows向けデスクトップアプリケーションです。
