@@ -1,5 +1,3 @@
-# .gitignore の作成（PowerShell用コマンド）
-@"
 .venv/
 __pycache__/
 *.pyc
@@ -7,4 +5,5 @@ output/
 build/
 dist/
 *.spec
-"@ | Out-File -FilePath .gitignore -Encoding utf8
+config.json
+納品物_EC商品データ自動収集ツール/
