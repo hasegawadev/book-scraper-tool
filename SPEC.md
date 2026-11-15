@@ -7,7 +7,7 @@
 - **言語**: Python 3
 - **通信・HTML解析**: `requests`, `beautifulsoup4`
 - **データ処理・Excel出力**: `pandas`, `openpyxl`
-- **GUI**: `tkinter`（標準ライブラリ）
+- **GUI**: `customtkinter`（tkinterベース）
 - **配布形式**: PyInstallerによる単一実行ファイル（`.exe`）
 
 ## 3. スクレイピング仕様（対象サイト構造と抽出項目）

@@ -1,8 +1,8 @@
-<img width="682" height="592" alt="スクリーンショット 2026-11-15 204244" src="https://github.com/user-attachments/assets/319269ab-5f8b-401c-a2eb-b14f4829cb6e" />
-
 # ECサイト商品データ自動収集＆条件抽出ツール (book-scraper-tool)
 
 対象ECサイト（[Books to Scrape](https://books.toscrape.com/)）から商品データを自動収集し、全商品データおよび指定条件に合致する「仕入れ候補リスト」をExcelファイル（`.xlsx`）へ自動出力するWindows向けデスクトップアプリケーションです。
+
+<img width="682" height="592" alt="スクリーンショット 2026-11-15 204244" src="https://github.com/user-attachments/assets/319269ab-5f8b-401c-a2eb-b14f4829cb6e" />
 
 ---
 
@@ -14,7 +14,7 @@
   - 通信エラー・タイムアウト時は最大3回まで自動リトライし、異常時は安全に停止するエラーハンドリングを搭載。
 - **条件抽出＆Excel 2シート出力**
   - 取得した全データを収録する **`全商品一覧`** シートと、指定条件（最低評価・上限価格・在庫あり `"In stock"`）を満たす商品のみを抽出した **`仕入れ候補`** シートの2シート構成で `.xlsx` ファイルを生成します。
-- **直感的なデスクトップGUI (`tkinter`)**
+- **直感的なデスクトップGUI (`customtkinter`)**
   - 取得ページ数上限・最低評価・上限価格・出力先フォルダをGUIから簡単に変更可能。
   - 前回選択した出力先フォルダを `config.json` に自動保存。
   - `threading` を用いた非同期実行により、収集中の画面フリーズを防止。
@@ -27,7 +27,7 @@
 - **言語**: Python 3
 - **通信・HTML解析**: `requests`, `beautifulsoup4`
 - **データ処理・Excel出力**: `pandas`, `openpyxl`
-- **GUI**: `tkinter`（Python標準ライブラリ）
+- **GUI**: `customtkinter`（tkinterベース）
 - **実行ファイル化**: `PyInstaller`
 
 ---
@@ -37,7 +37,7 @@
 ```text
 book-scraper-tool/
 ├── scraper.py         # スクレイピング・データ抽出・Excel出力コアモジュール
-├── gui.py             # TkinterデスクトップGUIアプリケーション
+├── gui.py             # CustomTkinterデスクトップGUIアプリケーション
 ├── SPEC.md            # 要件・仕様書
 ├── requirements.txt   # 依存パッケージ一覧
 └── README.md          # 本ドキュメント
